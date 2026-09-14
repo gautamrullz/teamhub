@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-import { getCurrentUser, requirePermission } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
