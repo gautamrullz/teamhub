@@ -13,21 +13,41 @@ enum UserRole {
   STAFF
 }
 
+enum ProductStatus {
+  ACTIVE
+  DISCONTINUED
+}
+
+enum BatchStatus {
+  ACTIVE
+  DEPLETED
+  EXPIRED
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  SALE
+  RETURN
+  ADJUSTMENT
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users    User[]
-  products Product[]
+  users        User[]
+  products     Product[]
+  batches      Batch[]
+  transactions InventoryTransaction[]
 }
 
 model User {
-  id             String       @id @default(cuid())
+  id             String   @id @default(cuid())
   name           String?
-  email          String       @unique
-  role           UserRole     @default(STAFF)
+  email          String   @unique
+  role           UserRole @default(STAFF)
   organizationId String
 
   organization Organization @relation(fields: [organizationId], references: [id])
@@ -37,19 +57,71 @@ model User {
 }
 
 model Product {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
 
-  name        String
-  sku         String?
-  description String?
-  price       Decimal
-  isActive    Boolean  @default(true)
+  name          String
+  sku           String
+  purchasePrice Decimal
+  sellingPrice  Decimal
+  imageUrl      String?
+  status        ProductStatus @default(ACTIVE)
 
-  organization Organization @relation(fields: [organizationId], references: [id])
+  organization Organization           @relation(fields: [organizationId], references: [id])
+  batches      Batch[]
+  transactions InventoryTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([organizationId, sku])
+  @@index([organizationId, name])
+}
+
+model Batch {
+  id             String @id @default(cuid())
+  organizationId String
+  productId      String
+
+  expiryDate DateTime?
+  quantity   Int         @default(0)
+  status     BatchStatus @default(ACTIVE)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  product      Product      @relation(fields: [productId], references: [id])
+
+  transactions InventoryTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, productId])
+  @@index([organizationId, status])
+  @@index([productId, expiryDate])
+}
+
+model InventoryTransaction {
+  id             String  @id @default(cuid())
+  organizationId String
+  productId      String?
+  batchId        String?
+
+  type     InventoryTransactionType
+  quantity Int
+
+  productName String
+  sku         String
+  expiryDate  DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  batch   Batch?   @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, productId])
+  @@index([organizationId, batchId])
+  @@index([organizationId, type])
 }
