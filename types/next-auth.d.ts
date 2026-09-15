@@ -1,9 +1,11 @@
-import { DefaultSession } from "next-auth";
+import type { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
+      name: string | null;
+      email: string;
       organizationId: string;
       role: "OWNER" | "ADMIN" | "STAFF";
     } & DefaultSession["user"];
@@ -21,3 +23,5 @@ declare module "next-auth/jwt" {
     role?: "OWNER" | "ADMIN" | "STAFF";
   }
 }
+
+export {};

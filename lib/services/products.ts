@@ -13,3 +13,22 @@ export async function getProducts() {
     },
   });
 }
+
+export async function getProductsForBatch() {
+  const user = await getCurrentUser();
+
+  return prisma.product.findMany({
+    where: {
+      organizationId: user.organizationId,
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+}

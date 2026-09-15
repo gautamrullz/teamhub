@@ -31,6 +31,16 @@ enum InventoryTransactionType {
   ADJUSTMENT
 }
 
+enum AuditAction {
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+  PRODUCT_DELETED
+
+  BATCH_CREATED
+  BATCH_UPDATED
+  BATCH_DELETED
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -41,6 +51,7 @@ model Organization {
   products     Product[]
   batches      Batch[]
   transactions InventoryTransaction[]
+  audits       AuditLog[]
 }
 
 model User {
@@ -68,9 +79,8 @@ model Product {
   imageUrl      String?
   status        ProductStatus @default(ACTIVE)
 
-  organization Organization           @relation(fields: [organizationId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
   batches      Batch[]
-  transactions InventoryTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -81,6 +91,7 @@ model Product {
 
 model Batch {
   id             String @id @default(cuid())
+  batchCode      String @unique
   organizationId String
   productId      String
 
@@ -91,8 +102,6 @@ model Batch {
   organization Organization @relation(fields: [organizationId], references: [id])
   product      Product      @relation(fields: [productId], references: [id])
 
-  transactions InventoryTransaction[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -102,27 +111,72 @@ model Batch {
 }
 
 model InventoryTransaction {
-  id             String  @id @default(cuid())
+  id                String @id @default(cuid())
+  transactionNumber String @unique
+
   organizationId String
-  productId      String?
-  batchId        String?
+
+  // Historical references only.
+  // These are intentionally NOT foreign keys.
+  productId String?
+  batchId   String?
+  userId    String?
 
   type     InventoryTransactionType
   quantity Int
 
+  // Snapshots preserved even if Product or Batch is deleted.
   productName String
   sku         String
+  batchCode   String?
   expiryDate  DateTime?
 
-  organization Organization @relation(fields: [organizationId], references: [id])
-
-  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  batch   Batch?   @relation(fields: [batchId], references: [id], onDelete: SetNull)
-
   createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
 
   @@index([organizationId, createdAt])
   @@index([organizationId, productId])
   @@index([organizationId, batchId])
+  @@index([organizationId, userId])
   @@index([organizationId, type])
+}
+
+model AuditLog {
+  id          String @id @default(cuid())
+  auditNumber String @unique
+
+  organizationId String
+
+  // Historical references only.
+  // These are intentionally NOT foreign keys.
+  productId String?
+  batchId   String?
+  userId    String?
+
+  action AuditAction
+
+  // Snapshots preserved for historical readability.
+  productName String?
+  sku         String?
+  batchCode   String?
+  quantity    Int?
+  expiryDate  DateTime?
+
+  details Json?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, productId])
+  @@index([organizationId, batchId])
+  @@index([organizationId, userId])
+  @@index([organizationId, action])
+}
+
+model Sequence {
+  key   String @id
+  value Int    @default(0)
 }
